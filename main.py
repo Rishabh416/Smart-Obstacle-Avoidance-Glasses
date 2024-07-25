@@ -10,6 +10,9 @@ import time
 
 cap = cv2.VideoCapture(0)
 
+initTime = time.time()
+iterations = 0
+
 while True:
     ret, frame = cap.read()
     # cv2.imshow("frame", frame)
@@ -22,8 +25,12 @@ while True:
     depthimagearray = np.array(depthimage)
     blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
     min, max, micloc, maxloc = cv2.minMaxLoc(blurimage)
-    plt.imshow(depthimagearray)
-    plt.show()
+
+    print(maxloc)
+    cv2.imshow("depthimagearray", depthimagearray)
+    iterations += 1
 
     if cv2.waitKey(1) & 0xFF == ord('q'): 
         break
+
+print((time.time() - initTime)/iterations)
