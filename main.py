@@ -13,6 +13,8 @@ cap = cv2.VideoCapture(0)
 initTime = time.time()
 iterations = 0
 
+cameraFOV = 80
+
 while True:
     ret, frame = cap.read()
     # cv2.imshow("frame", frame)
@@ -25,6 +27,10 @@ while True:
     depthimagearray = np.array(depthimage)
     blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
     min, max, micloc, maxloc = cv2.minMaxLoc(blurimage)
+
+    imageWidth = depthimagearray.shape[1]
+    depthAngle = (maxloc[0]*cameraFOV)/imageWidth
+    print(f'closest object at {5 * round(round(depthAngle) / 5)} degrees')
 
     print(maxloc)
     cv2.imshow("depthimagearray", depthimagearray)
