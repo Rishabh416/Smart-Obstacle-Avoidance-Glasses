@@ -7,6 +7,8 @@ from PIL import Image
 import cv2
 import matplotlib.pyplot as plt
 import time
+from gtts import gTTS
+from playsound import playsound
 
 cap = cv2.VideoCapture(0)
 
@@ -30,7 +32,13 @@ while True:
 
     imageWidth = depthimagearray.shape[1]
     depthAngle = (maxloc[0]*cameraFOV)/imageWidth
-    print(f'closest object at {5 * round(round(depthAngle) / 5)} degrees')
+    text = f'closest object at {5 * round(round(depthAngle) / 5)} degrees' 
+    print(text)
+
+    tts = gTTS(text=text, lang='en')
+    tts.save("audio.mp3")
+    playsound('audio.mp3')
+
 
     print(maxloc)
     cv2.imshow("depthimagearray", depthimagearray)
