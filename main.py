@@ -11,15 +11,19 @@ from gtts import gTTS
 from playsound import playsound
 import os
 
-cap = cv2.VideoCapture(0)
+cap1 = cv2.VideoCapture(0)
+cap2 = cv2.VideoCapture(0)
 
 initTime = time.time()
 iterations = 0
 
 cameraFOV = 80
+focalLength = 4.71 # f
+camPixelSize = 0.0008 # d
+camDistance = 55 # T
 
 while True:
-    ret, frame = cap.read()
+    ret, frame = cap1.read()
     # cv2.imshow("frame", frame)
     
     image = Image.fromarray(frame)
@@ -29,15 +33,37 @@ while True:
 
     depthimagearray = np.array(depthimage)
     blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
-    min, max, micloc, maxloc = cv2.minMaxLoc(blurimage)
-    print(max, maxloc)
+    min, max1, micloc, maxloc1 = cv2.minMaxLoc(blurimage)
+    print(max1, maxloc1)
+
+
+
+    ret, frame = cap2.read()
+    # cv2.imshow("frame", frame)
+    
+    image = Image.fromarray(frame)
+    pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
+    result = pipe(image)
+    depthimage = result["depth"]
+
+    depthimagearray = np.array(depthimage)
+    blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
+    min, max2, micloc, maxloc2 = cv2.minMaxLoc(blurimage)
+    print(max2, maxloc2)
+
+
+
+    pixelDistance = (maxloc1[0]-maxloc2[0]) # n1-n2
+    objectDistance = (focalLength/camPixelSize)*(camDistance/pixelDistance)/10 # value in cm 
 
     imageWidth = depthimagearray.shape[1]
-    depthAngle = (maxloc[0]*cameraFOV)/imageWidth
-    text = f'closest object at {5 * round(round(depthAngle) / 5)} degrees' 
+    depthAngle = (maxloc1[0]*cameraFOV)/imageWidth
+    text = f'closest object at {objectDistance} centimeters, {5 * round(round(depthAngle) / 5)} degrees' 
     # print(text)
 
     cv2.imshow("depthimagearray", depthimagearray)
+
+
 
     tts = gTTS(text=text, lang='en')
     tts.save("audio.mp3")
