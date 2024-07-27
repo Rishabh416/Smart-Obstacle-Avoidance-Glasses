@@ -12,7 +12,7 @@ from playsound import playsound
 import os
 
 cap1 = cv2.VideoCapture(0)
-cap2 = cv2.VideoCapture(0)
+cap2 = cv2.VideoCapture(1)
 
 initTime = time.time()
 iterations = 0
