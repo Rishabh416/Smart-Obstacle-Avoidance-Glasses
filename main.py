@@ -11,16 +11,16 @@ from gtts import gTTS
 from playsound import playsound
 import os
 
-cap1 = cv2.VideoCapture(2)
-cap2 = cv2.VideoCapture(1)
+cap1 = cv2.VideoCapture(1)
+cap2 = cv2.VideoCapture(2)
 
 initTime = time.time()
 iterations = 0
 
 cameraFOV = 88
-focalLength = 6.5755 # f
-camPixelSize = 0.001875 # d
-camDistance =  6 # T
+focalLength = 6 # f mm 
+camPixelSize = 0.0027 # d mm
+camDistance = 60 # T mm
 
 while True:
     ret, frame = cap1.read()
@@ -34,7 +34,7 @@ while True:
     depthimagearray = np.array(depthimage)
     blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
     min, max1, micloc, maxloc1 = cv2.minMaxLoc(blurimage)
-    print(max1, maxloc1)
+    print("image1",max1, maxloc1)
 
 
 
@@ -49,7 +49,7 @@ while True:
     depthimagearray = np.array(depthimage)
     blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
     min, max2, micloc, maxloc2 = cv2.minMaxLoc(blurimage)
-    print(max2, maxloc2)
+    print("image2",max2, maxloc2)
 
 
 
