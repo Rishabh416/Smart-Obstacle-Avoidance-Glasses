@@ -11,16 +11,16 @@ from gtts import gTTS
 from playsound import playsound
 import os
 
-cap1 = cv2.VideoCapture(0)
+cap1 = cv2.VideoCapture(2)
 cap2 = cv2.VideoCapture(1)
 
 initTime = time.time()
 iterations = 0
 
-cameraFOV = 80
-focalLength = 4.71 # f
-camPixelSize = 0.0008 # d
-camDistance = 55 # T
+cameraFOV = 88
+focalLength = 6.5755 # f
+camPixelSize = 0.001875 # d
+camDistance =  6 # T
 
 while True:
     ret, frame = cap1.read()
@@ -54,7 +54,7 @@ while True:
 
 
     pixelDistance = (maxloc1[0]-maxloc2[0]) # n1-n2
-    objectDistance = (focalLength/camPixelSize)*(camDistance/pixelDistance)/10 # value in cm 
+    objectDistance = round((focalLength/camPixelSize)*(camDistance/pixelDistance)/10) # value in cm 
 
     imageWidth = depthimagearray.shape[1]
     depthAngle = (maxloc1[0]*cameraFOV)/imageWidth
