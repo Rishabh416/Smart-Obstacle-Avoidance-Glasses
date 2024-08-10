@@ -14,46 +14,48 @@ import os
 cap1 = cv2.VideoCapture(1)
 cap2 = cv2.VideoCapture(2)
 
+cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
+cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
 initTime = time.time()
 iterations = 0
 
 cameraFOV = 88
 focalLength = 6 # f mm 
-camPixelSize = 0.0027 # d mm
-camDistance = 60 # T mm
+camPixelSize = 0.00288 # d mm
+camDistance = 140 # T mm
+
+pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
 while True:
-    ret, frame = cap1.read()
+    ret, frame1 = cap1.read()
+    ret, frame2 = cap2.read()
     # cv2.imshow("frame", frame)
     
-    image = Image.fromarray(frame)
-    pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
+    image = Image.fromarray(frame1)
     result = pipe(image)
     depthimage = result["depth"]
 
     depthimagearray = np.array(depthimage)
     blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
-    min, max1, micloc, maxloc1 = cv2.minMaxLoc(blurimage)
+    min1, max1, micloc1, maxloc1 = cv2.minMaxLoc(blurimage)
     print("image1",max1, maxloc1)
 
+    x, y = maxloc1
+    x_start = max(0, x - 6)
+    y_start = max(0, y - 6)
+    x_end = min(frame1.shape[1], x + 6 + 1)
+    y_end = min(frame1.shape[0], y + 6 + 1)
 
-
-    ret, frame = cap2.read()
-    # cv2.imshow("frame", frame)
-    
-    image = Image.fromarray(frame)
-    pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
-    result = pipe(image)
-    depthimage = result["depth"]
-
-    depthimagearray = np.array(depthimage)
-    blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
-    min, max2, micloc, maxloc2 = cv2.minMaxLoc(blurimage)
-    print("image2",max2, maxloc2)
-
-
-
-    pixelDistance = (maxloc1[0]-maxloc2[0]) # n1-n2
+    gridTemplate = frame1[y_start:y_end, x_start:x_end]
+    result = cv2.matchTemplate(frame2, gridTemplate, cv2.TM_CCOEFF_NORMED)
+    min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
+    c, h, w = gridTemplate.shape[::-1]
+    print(c, h, w)
+    pixelDistance = (maxloc1[0]-(max_loc2[0] + w // 2)) # n1-n2
     objectDistance = round((focalLength/camPixelSize)*(camDistance/pixelDistance)/10) # value in cm 
 
     imageWidth = depthimagearray.shape[1]
