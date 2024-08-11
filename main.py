@@ -1,7 +1,6 @@
 # python 3.12
 
 from transformers import pipeline
-import torch
 import numpy as np
 from PIL import Image
 import cv2
@@ -12,8 +11,8 @@ from playsound import playsound
 import os
 
 # setting video capture sources
-cap1 = cv2.VideoCapture(1)
-cap2 = cv2.VideoCapture(2)
+cap1 = cv2.VideoCapture(0)
+cap2 = cv2.VideoCapture(1)
 
 # setting capture size to 1920x1080 (same as camera)
 cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
@@ -27,7 +26,7 @@ iterations = 0
 
 # camera parameters in millimeters
 cameraFOV = 88
-focalLength = 6 # f
+focalLength = 2.3 # f
 camPixelSize = 0.001875 # d 3.6/1920
 camDistance = 140 # T
 
@@ -65,6 +64,7 @@ while True:
     # find matching template in image from camera 2
     result = cv2.matchTemplate(frame2blur, gridTemplate, cv2.TM_CCOEFF_NORMED)
     min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
+    print("image2",max_val2, max_loc2)
     c, h, w = gridTemplate.shape[::-1]
     x_centerLoc = max_loc2[0] + w // 2
 
@@ -74,9 +74,7 @@ while True:
 
     # calculation of yaw angle of closest object
     imageWidth = depthimagearray.shape[1]
-    depthAngle1 = (maxloc1[0]*cameraFOV)/imageWidth
-    depthAngle2 = (x_centerLoc*cameraFOV)/imageWidth
-    depthAngle = (depthAngle1+depthAngle2/2)
+    depthAngle = (maxloc1[0]*cameraFOV)/imageWidth
 
     text = f'closest object at {objectDistance} centimeters, {5 * round(round(depthAngle) / 5)} degrees' 
 
