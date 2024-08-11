@@ -35,23 +35,26 @@ while True:
     ret, frame2 = cap2.read()
     # cv2.imshow("frame", frame)
     
-    image = Image.fromarray(frame1)
+    blurimage = cv2.GaussianBlur(frame1,(7,7),0)
+    image = Image.fromarray(blurimage)
     result = pipe(image)
     depthimage = result["depth"]
 
     depthimagearray = np.array(depthimage)
-    blurimage = cv2.GaussianBlur(depthimagearray,(5,5),0)
-    min1, max1, micloc1, maxloc1 = cv2.minMaxLoc(blurimage)
+    min1, max1, micloc1, maxloc1 = cv2.minMaxLoc(depthimagearray)
     print("image1",max1, maxloc1)
 
     x, y = maxloc1
-    x_start = max(0, x - 6)
-    y_start = max(0, y - 6)
-    x_end = min(frame1.shape[1], x + 6 + 1)
-    y_end = min(frame1.shape[0], y + 6 + 1)
+    halflength = 20
+    x_start = max(0, x - halflength)
+    y_start = max(0, y - halflength)
+    x_end = min(frame1.shape[1], x + halflength + 1)
+    y_end = min(frame1.shape[0], y + halflength + 1)
+
+    frame2blur = cv2.GaussianBlur(frame2,(7,7),0)
 
     gridTemplate = frame1[y_start:y_end, x_start:x_end]
-    result = cv2.matchTemplate(frame2, gridTemplate, cv2.TM_CCOEFF_NORMED)
+    result = cv2.matchTemplate(frame2blur, gridTemplate, cv2.TM_CCOEFF_NORMED)
     min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
     c, h, w = gridTemplate.shape[::-1]
     print(c, h, w)
@@ -63,7 +66,9 @@ while True:
     text = f'closest object at {objectDistance} centimeters, {5 * round(round(depthAngle) / 5)} degrees' 
     # print(text)
 
-    cv2.imshow("depthimagearray", depthimagearray)
+    # cv2.imshow("depthimagearray", depthimagearray)
+    cv2.imshow("frame2",frame2)
+    cv2.imshow("template",gridTemplate)
 
 
 
