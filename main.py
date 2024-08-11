@@ -43,7 +43,7 @@ while True:
     frame2blur = cv2.GaussianBlur(frame2,(7,7),0)
 
     # process openCV image through depthAnything pipeline
-    image = Image.fromarray(frame1blur)
+    image = Image.fromarray(cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB))
     result = pipe(image)
     depthimage = result["depth"]
 
@@ -59,7 +59,7 @@ while True:
     y_start = max(0, y - halflength)
     x_end = min(frame1.shape[1], x + halflength + 1)
     y_end = min(frame1.shape[0], y + halflength + 1)
-    gridTemplate = frame1[y_start:y_end, x_start:x_end]
+    gridTemplate = frame1blur[y_start:y_end, x_start:x_end]
 
     # find matching template in image from camera 2
     result = cv2.matchTemplate(frame2blur, gridTemplate, cv2.TM_CCOEFF_NORMED)
