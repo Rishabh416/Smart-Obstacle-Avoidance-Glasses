@@ -26,9 +26,9 @@ iterations = 0
 
 # camera parameters in millimeters
 cameraFOV = 88
-focalLength = 2.3 # f
+focalLength = 0.57 # f
 camPixelSize = 0.001875 # d 3.6/1920
-camDistance = 140 # T
+camDistance = 60 # T
 
 # relative depth estimation model
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
@@ -41,11 +41,22 @@ while True:
     # image pre processing, smoothing camera noise
     frame1blur = cv2.GaussianBlur(frame1,(7,7),0)
     frame2blur = cv2.GaussianBlur(frame2,(7,7),0)
+    # cv2.imshow("frame1blur", frame1blur)
+    # cv2.imshow("frame2blur", frame2blur)
 
     # process openCV image through depthAnything pipeline
     image = Image.fromarray(cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB))
     result = pipe(image)
     depthimage = result["depth"]
+
+    f = plt.figure()
+    f.add_subplot(1,3, 1)
+    plt.imshow(frame1blur)
+    f.add_subplot(1,3, 2)
+    plt.imshow(frame2blur)
+    f.add_subplot(1,3, 3)
+    plt.imshow(np.array(depthimage))
+    plt.show(block=True)
 
     # find closest point from depth image array
     depthimagearray = np.array(depthimage)
@@ -61,8 +72,12 @@ while True:
     y_end = min(frame1.shape[0], y + halflength + 1)
     gridTemplate = frame1blur[y_start:y_end, x_start:x_end]
 
+    # roi restriction
+    ymax = y + (2*halflength)+100
+    ymin = y - (2*halflength)-100
+
     # find matching template in image from camera 2
-    result = cv2.matchTemplate(frame2blur, gridTemplate, cv2.TM_CCOEFF_NORMED)
+    result = cv2.matchTemplate(frame2blur[ymin:ymax, :], gridTemplate, cv2.TM_SQDIFF) # TM_SQDIFF TM_CCOEFF
     min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
     print("image2",max_val2, max_loc2)
     c, h, w = gridTemplate.shape[::-1]
