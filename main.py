@@ -27,7 +27,7 @@ iterations = 0
 
 # camera parameters in millimeters
 cameraFOV = 88
-focalLength = 16 # f
+focalLength = 450 # f
 camPixelSize = 0.001875 # d 3.6/1920
 camDistance = 60 # T
 
@@ -103,7 +103,7 @@ while True:
 
     # calculate the distance of nearest object
     pixelDistance = (n1 - n2) # n1-n2
-    objectDistance = round((focalLength/camPixelSize)*(camDistance/pixelDistance)/10) # value in cm 
+    objectDistance = round(((focalLength*camDistance)/pixelDistance)/10) # value in cm 
 
     # calculation of yaw angle of closest object
     imageWidth = depthimagearray.shape[1]
