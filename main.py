@@ -9,6 +9,7 @@ import time
 from gtts import gTTS
 from playsound import playsound
 import os
+import math
 
 # setting video capture sources
 cap1 = cv2.VideoCapture(0)
@@ -26,7 +27,7 @@ iterations = 0
 
 # camera parameters in millimeters
 cameraFOV = 88
-focalLength = 5 # f
+focalLength = 16 # f
 camPixelSize = 0.001875 # d 3.6/1920
 camDistance = 60 # T
 
@@ -41,8 +42,8 @@ while True:
     ret, frame2 = cap2.read()
     
     # image pre processing, smoothing camera noise
-    frame1blur = cv2.GaussianBlur(frame1,(7,7),0)
-    frame2blur = cv2.GaussianBlur(frame2,(7,7),0)
+    frame1blur = cv2.GaussianBlur(frame1,(3,3),0)
+    frame2blur = cv2.GaussianBlur(frame2,(3,3),0)
     # cv2.imshow("frame1blur", frame1blur)
     # cv2.imshow("frame2blur", frame2blur)
 
@@ -57,19 +58,6 @@ while True:
     print("image1",max1, maxloc1)
     x, y = maxloc1
 
-    # create 40x40 image template around closest point
-    halflength = 10
-    x_start = max(0, x - halflength)
-    y_start = max(0, y - halflength)
-    x_end = min(frame1.shape[1], x + halflength + 1)
-    y_end = min(frame1.shape[0], y + halflength + 1)
-    gridTemplate = frame1blur[y_start:y_end, x_start:x_end]
-
-    # roi restriction
-    ymax = y + (2*halflength)
-    ymin = y - (2*halflength)
-    frame2ROI = frame2blur[ymin:ymax, :]
-
     # find matching template in image from camera 2
     keypoints1, descriptors1 = orb.detectAndCompute(frame1blur, None)
     keypoints2, descriptors2 = orb.detectAndCompute(frame2blur, None)
@@ -79,8 +67,9 @@ while True:
 
     matched_points1 = []
     matched_points2 = []
+    points_distance = []
 
-    for match in matches[:20]:  # Limit to the top 20 matches
+    for match in matches[:500]:  # Limit to the top 20 matches
         img1_idx = match.queryIdx
         img2_idx = match.trainIdx
 
@@ -94,26 +83,26 @@ while True:
     # Print the matched points
     print("Matched points in Image 1:")
     for point in matched_points1:
-        print(point)
+        pointX, pointY = point
+        distance = math.sqrt(((x-pointX)**2)+((y-pointY)**2))
+        points_distance.append(abs(distance))
 
-    print("\nMatched points in Image 2:")
-    for point in matched_points2:
-        print(point)
+    closestPoint = points_distance.index(min(points_distance))
+    print(points_distance)
+    print(f"closest point is {matched_points1[closestPoint]} and matching point is {matched_points2[closestPoint]}")
 
-    matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2blur, keypoints2, matches[:20], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-
+    matched_image = cv2.drawMatches(frame1blur, keypoints1, frame2blur, keypoints2, matches[:500], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
     f = plt.figure()
-    f.add_subplot(1,3, 1)
-    plt.imshow(frame1blur)
-    f.add_subplot(1,3, 2)
-    plt.imshow(frame2blur)
-    f.add_subplot(1,3, 3)
+    f.add_subplot(1,1, 1)
     plt.imshow(np.array(matched_image))
     plt.show(block=True)
 
+    n1, m1 = matched_points1[closestPoint]
+    n2, m2 = matched_points2[closestPoint]
+
     # calculate the distance of nearest object
-    pixelDistance = (maxloc1[0]-x_centerLoc) # n1-n2
+    pixelDistance = (n1 - n2) # n1-n2
     objectDistance = round((focalLength/camPixelSize)*(camDistance/pixelDistance)/10) # value in cm 
 
     # calculation of yaw angle of closest object
