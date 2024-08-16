@@ -33,6 +33,8 @@ camDistance = 60 # T
 # relative depth estimation model
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
+orb = cv2.ORB_create()
+
 while True:
     # capture image from both cameras
     ret, frame1 = cap1.read()
@@ -69,12 +71,37 @@ while True:
     frame2ROI = frame2blur[ymin:ymax, :]
 
     # find matching template in image from camera 2
-    result = cv2.matchTemplate(frame2ROI, gridTemplate, cv2.TM_CCOEFF) # TM_SQDIFF TM_CCOEFF
-    min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
-    c, h, w = gridTemplate.shape[::-1]
-    x_centerLoc = max_loc2[0] + w // 2
-    y_centerLoc = max_loc2[1] + h // 2
-    print("image2",max_val2, max_loc2)
+    keypoints1, descriptors1 = orb.detectAndCompute(frame1blur, None)
+    keypoints2, descriptors2 = orb.detectAndCompute(frame2blur, None)
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(descriptors1, descriptors2)
+    matches = sorted(matches, key=lambda x: x.distance)
+
+    matched_points1 = []
+    matched_points2 = []
+
+    for match in matches[:20]:  # Limit to the top 20 matches
+        img1_idx = match.queryIdx
+        img2_idx = match.trainIdx
+
+        # Get the coordinates of the keypoints in both images
+        (x1, y1) = keypoints1[img1_idx].pt
+        (x2, y2) = keypoints2[img2_idx].pt
+
+        matched_points1.append((x1, y1))
+        matched_points2.append((x2, y2))
+
+    # Print the matched points
+    print("Matched points in Image 1:")
+    for point in matched_points1:
+        print(point)
+
+    print("\nMatched points in Image 2:")
+    for point in matched_points2:
+        print(point)
+
+    matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2blur, keypoints2, matches[:20], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
 
     f = plt.figure()
     f.add_subplot(1,3, 1)
@@ -82,7 +109,7 @@ while True:
     f.add_subplot(1,3, 2)
     plt.imshow(frame2blur)
     f.add_subplot(1,3, 3)
-    plt.imshow(np.array(frame2ROI))
+    plt.imshow(np.array(matched_image))
     plt.show(block=True)
 
     # calculate the distance of nearest object
