@@ -21,11 +21,11 @@ while True:
     frame1 = cv2.GaussianBlur(frame1,(5,5),0)
     # frame2 = cv2.GaussianBlur(frame2,(5,5),0)
 
-    frame1 = cv2.adaptiveThreshold(frame1, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,5)
-    # frame2 = cv2.adaptiveThreshold(frame2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,2)
-
     frame1 = edges = cv2.Canny(frame1,100,200)
     # frame2 = edges = cv2.Canny(frame2,100,300)
+    
+    frame1 = cv2.adaptiveThreshold(frame1, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,5)
+    # # frame2 = cv2.adaptiveThreshold(frame2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,2)
 
     f = plt.figure()
     f.add_subplot(1,1, 1)
