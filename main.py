@@ -34,7 +34,7 @@ camDistance = 60 # T
 # relative depth estimation model
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
-orb = cv2.ORB_create()
+orb = cv2.ORB_create(scaleFactor=1.1, nlevels=10, edgeThreshold=15)
 
 while True:
     # capture image from both cameras
@@ -69,13 +69,14 @@ while True:
     matched_points2 = []
     points_distance = []
 
-    for match in matches[:500]:  # Limit to the top 20 matches
+    for match in matches[:100]:  # Limit to the top 20 matches
         img1_idx = match.queryIdx
         img2_idx = match.trainIdx
 
         # Get the coordinates of the keypoints in both images
         (x1, y1) = keypoints1[img1_idx].pt
         (x2, y2) = keypoints2[img2_idx].pt
+        print(x2-x1)
 
         matched_points1.append((x1, y1))
         matched_points2.append((x2, y2))
@@ -88,14 +89,17 @@ while True:
         points_distance.append(abs(distance))
 
     closestPoint = points_distance.index(min(points_distance))
-    print(points_distance)
     print(f"closest point is {matched_points1[closestPoint]} and matching point is {matched_points2[closestPoint]}")
 
-    matched_image = cv2.drawMatches(frame1blur, keypoints1, frame2blur, keypoints2, matches[:500], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    matched_image = cv2.drawMatches(frame1blur, keypoints1, frame2blur, keypoints2, matches[:100], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
     f = plt.figure()
-    f.add_subplot(1,1, 1)
-    plt.imshow(np.array(matched_image))
+    # f.add_subplot(1,3, 1)
+    # plt.imshow(np.array(matched_image))
+    f.add_subplot(1,2, 1)
+    plt.imshow(np.array(frame1blur))
+    f.add_subplot(1,2, 2)
+    plt.imshow(np.array(frame2blur))
     plt.show(block=True)
 
     n1, m1 = matched_points1[closestPoint]
@@ -103,7 +107,7 @@ while True:
 
     # calculate the distance of nearest object
     pixelDistance = (n1 - n2) # n1-n2
-    objectDistance = round(((focalLength*camDistance)/pixelDistance)/10) # value in cm 
+    objectDistance = round((0.0004*(pixelDistance**2))+(0.3767*(pixelDistance))+110.8) # value in cm 
 
     # calculation of yaw angle of closest object
     imageWidth = depthimagearray.shape[1]
