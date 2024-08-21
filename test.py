@@ -4,8 +4,8 @@ from PIL import Image
 import cv2
 import matplotlib.pyplot as plt
 
-cap1 = cv2.VideoCapture(0) # left
-cap2 = cv2.VideoCapture(1) # right
+cap1 = cv2.VideoCapture(1) # left
+cap2 = cv2.VideoCapture(0) # right
 
 cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
@@ -56,6 +56,7 @@ while True:
 
     pixelDistance = (maxloc1[0]-x_centerLoc)
     objectDistance = round((0.0004*(pixelDistance**2))+(0.3767*(pixelDistance))+110.8)
+    print(objectDistance)
 
     f = plt.figure()
     f.add_subplot(1,3, 1)
