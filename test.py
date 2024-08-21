@@ -55,7 +55,7 @@ while True:
     x_centerLoc = max_loc2[0] + w // 2
 
     pixelDistance = (maxloc1[0]-x_centerLoc)
-    objectDistance = round((0.0004*(pixelDistance**2))+(0.3767*(pixelDistance))+110.8)
+    objectDistance = round((0.0004*(pixelDistance**2))+(0.3767*(pixelDistance))+110.8) # todo: update equation for object distance upto 2 m at 10cm intervals
     print(objectDistance)
 
     f = plt.figure()
