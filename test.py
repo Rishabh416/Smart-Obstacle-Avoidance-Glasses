@@ -4,8 +4,8 @@ from PIL import Image
 import cv2
 import matplotlib.pyplot as plt
 
-cap1 = cv2.VideoCapture(0) 
-cap2 = cv2.VideoCapture(1)
+cap1 = cv2.VideoCapture(0) # left
+cap2 = cv2.VideoCapture(1) # right
 
 cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
@@ -14,25 +14,24 @@ cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
+pixelDiff = 175
+
 while True:
     ret, frame1 = cap1.read()
     ret, frame2 = cap2.read()
 
-    image = Image.fromarray(cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB))
-    result = pipe(image)
-    depthimage = result["depth"]
-
-    frame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
-    frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+    frame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
+    frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
 
     frame1 = cv2.GaussianBlur(frame1,(5,5),0)
     frame2 = cv2.GaussianBlur(frame2,(5,5),0)
 
-    frame1 = edges = cv2.Canny(frame1,100,200)
-    frame2 = edges = cv2.Canny(frame2,100,300)
+    frame2 = frame2[:,pixelDiff:1920]
+    frame1 = frame1[:,0:1920-pixelDiff]
 
-    frame1 = cv2.adaptiveThreshold(frame1, 1, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,5)
-    frame2 = cv2.adaptiveThreshold(frame2, 1, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,5)
+    image = Image.fromarray(cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB))
+    result = pipe(image)
+    depthimage = result["depth"]
 
     depthimagearray = np.array(depthimage)
     min1, max1, micloc1, maxloc1 = cv2.minMaxLoc(depthimagearray)
@@ -52,7 +51,7 @@ while True:
     result = cv2.matchTemplate(frame2[ymin:ymax, :], gridTemplate, cv2.TM_CCOEFF) # TM_SQDIFF TM_CCOEFF
     min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
     print("image2",max_val2, max_loc2)
-    h, w = gridTemplate.shape[::-1]
+    c, h, w = gridTemplate.shape[::-1]
     x_centerLoc = max_loc2[0] + w // 2
 
     pixelDistance = (maxloc1[0]-x_centerLoc)
