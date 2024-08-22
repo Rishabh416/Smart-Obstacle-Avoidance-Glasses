@@ -58,6 +58,30 @@ while True:
     objectDistance = round((0.0004*(pixelDistance**2))+(0.3767*(pixelDistance))+110.8) # todo: update equation for object distance upto 2 m at 10cm intervals
     print(objectDistance)
 
+    h, w, c = frame1.shape
+
+    vertical = "middle"
+    horizontal = "middle"
+
+    match (x // (w/3)):
+        case 0.0:
+            horizontal = "left"
+        case 1.0:
+            horizontal = "middle"
+        case 2.0:
+            horizontal = "right"
+
+    match (y // (h/3)):
+        case 0.0:
+            horizontal = "top"
+        case 1.0:
+            horizontal = "middle"
+        case 2.0:
+            horizontal = "bottom"
+
+    text = f'closest object at {objectDistance} centimeters, direction {vertical},{horizontal}' 
+    print(text)
+
     f = plt.figure()
     f.add_subplot(1,3, 1)
     plt.imshow(np.array(frame1))
