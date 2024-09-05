@@ -10,7 +10,7 @@ import os
 import math
 
 cap1 = cv2.VideoCapture(1) # left
-cap2 = cv2.VideoCapture(0) # right
+cap2 = cv2.VideoCapture(2) # right
 
 cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
@@ -40,7 +40,7 @@ while True:
     print("image1",max1, maxloc1)
     x, y = maxloc1
 
-    halflength = 100
+    halflength = 300
     x_start = max(0, x - halflength)
     y_start = max(0, y - halflength)
     x_end = min(frame1.shape[1], x + halflength)
@@ -54,7 +54,7 @@ while True:
         ymax = 1920
     if ymin < 0:
         ymin = 0
-    # -----------------------------------------
+    
     keypoints1, descriptors1 = orb.detectAndCompute(gridTemplate, None)
     keypoints2, descriptors2 = orb.detectAndCompute(frame2[ymin:ymax, :], None)
     bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
@@ -76,35 +76,20 @@ while True:
         matched_points1.append((x1, y1))
         matched_points2.append((x2, y2))
 
-    # Print the matched points
-    print("Matched points in Image 1:")
-    for point in matched_points1:
-        pointX, pointY = point
-        distance = math.sqrt(((x-pointX)**2)+((y-pointY)**2))
-        points_distance.append(abs(distance))
-
-    closestPoint = points_distance.index(min(points_distance))
-    print(points_distance)
-    print(f"closest point is {matched_points1[closestPoint]} and matching point is {matched_points2[closestPoint]}")
-
     matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:5], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
     f = plt.figure()
     f.add_subplot(1,1, 1)
     plt.imshow(np.array(matched_image))
     plt.show(block=True)
-    # n1, m1 = matched_points1[closestPoint]
-    # n2, m2 = matched_points2[closestPoint]
-    # -----------------------------------------
 
-    # result = cv2.matchTemplate(frame2[ymin:ymax, :], gridTemplate, cv2.TM_CCOEFF) # TM_SQDIFF TM_CCOEFF
-    # min_val2, max_val2, min_loc2, max_loc2 = cv2.minMaxLoc(result)
-    # print("image2",max_val2, max_loc2)
-    # c, h, w = gridTemplate.shape[::-1]
-    # x_centerLoc = max_loc2[0] + w // 2
+    print(f"closest point is {matched_points1[0]} and matching point is {matched_points2[0]}")
+    pointX1, pointY1 = matched_points1[0]
+    pointX2, pointY2 = matched_points2[0]
+    print((pointX1 + x_start)-(pointX2))
 
-    pixelDistance = (0)
-    objectDistance = round((0.0004*(pixelDistance**2))+(0.3767*(pixelDistance))+110.8) # todo: update equation for object distance upto 2 m at 10cm intervals
+    pixelDistance = ((pointX1 + x_start)-(pointX2))
+    objectDistance = round((0.00869691*(pixelDistance**2))+(-5.67746*(pixelDistance))+938.723) # todo: update equation for object distance upto 2 m at 10cm intervals
     print(objectDistance)
 
     h, w, c = frame1.shape
@@ -112,7 +97,7 @@ while True:
     vertical = "middle"
     horizontal = "middle"
 
-    match (x // (w/3)):
+    match (pointX2 // (w/3)):
         case 0.0:
             horizontal = "left"
         case 1.0:
@@ -120,7 +105,7 @@ while True:
         case 2.0:
             horizontal = "right"
 
-    match (y // (h/3)):
+    match ((pointY2 + y_start) // (h/3)):
         case 0.0:
             horizontal = "top"
         case 1.0:
@@ -132,10 +117,11 @@ while True:
     print(text)
 
     # text to speech setup
-    # tts = gTTS(text=text, lang='en')
-    # tts.save("audio.mp3")
-    # playsound("audio.mp3")
-    # os.remove("audio.mp3") 
+    tts = gTTS(text=text, lang='en')
+    tts.save("audio.mp3")
+    playsound("audio.mp3")
+    os.remove("audio.mp3") 
+    
 
     if cv2.waitKey(1) & 0xFF == ord('q'): 
         break
