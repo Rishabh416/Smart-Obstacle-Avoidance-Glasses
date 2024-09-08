@@ -40,7 +40,7 @@ while True:
     print("image1",max1, maxloc1)
     x, y = maxloc1
 
-    halflength = 300
+    halflength = 100
     x_start = max(0, x - halflength)
     y_start = max(0, y - halflength)
     x_end = min(frame1.shape[1], x + halflength)
@@ -76,7 +76,7 @@ while True:
         matched_points1.append((x1, y1))
         matched_points2.append((x2, y2))
 
-    matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:5], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:1], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
     f = plt.figure()
     f.add_subplot(1,1, 1)

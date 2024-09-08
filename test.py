@@ -19,7 +19,7 @@ cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
-orb = cv2.SIFT_create()
+orb = cv2.ORB_create()
 
 while True:
     ret, frame1 = cap1.read()
@@ -40,7 +40,7 @@ while True:
     print("image1",max1, maxloc1)
     x, y = maxloc1
 
-    halflength = 300
+    halflength = 100
     x_start = max(0, x - halflength)
     y_start = max(0, y - halflength)
     x_end = min(frame1.shape[1], x + halflength)
@@ -57,70 +57,85 @@ while True:
     
     keypoints1, descriptors1 = orb.detectAndCompute(gridTemplate, None)
     keypoints2, descriptors2 = orb.detectAndCompute(frame2[ymin:ymax, :], None)
-    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-    matches = bf.match(descriptors1, descriptors2)
-    matches = sorted(matches, key=lambda x: x.distance)
 
-    matched_points1 = []
-    matched_points2 = []
-    points_distance = []
+    index_params = dict(algorithm=6,  # FLANN_INDEX_LSH (used for ORB, BRIEF, BRISK)
+                    table_number=6,  # 12
+                    key_size=12,     # 20
+                    multi_probe_level=1)  # 2
+    search_params = dict(checks=50)
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    matches = flann.knnMatch(descriptors1, descriptors2, k=1)
 
-    for match in matches[:5]:  # Limit to the top 20 matches
-        img1_idx = match.queryIdx
-        img2_idx = match.trainIdx
+    distance_threshold = 0.75  # Threshold for cluster distance (you can adjust this)
+    filtered_matches = []
 
-        # Get the coordinates of the keypoints in both images
-        (x1, y1) = keypoints1[img1_idx].pt
-        (x2, y2) = keypoints2[img2_idx].pt
+    # Cluster-based filtering
+    for m in matches:
+        # Extract the distances of the k nearest neighbors
+        distances = [match.distance for match in m]
+        
+        # Calculate the mean distance
+        mean_distance = np.mean(distances)
+        
+        # Calculate the standard deviation of distances
+        std_distance = np.std(distances)
+        
+        # Filter based on the standard deviation being below a threshold
+        if std_distance / mean_distance < distance_threshold:
+            # Consider the match as valid and append the best match (first in the list)
+            filtered_matches.append(m[0])
 
-        matched_points1.append((x1, y1))
-        matched_points2.append((x2, y2))
+    # Display or use filtered_matches
+    print(f"Total matches before filtering: {len(matches)}")
+    print(f"Total matches after filtering: {len(filtered_matches)}")
 
-    matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:5], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    # Optionally, you can draw the matches on images
+    img_matches = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2,
+        filtered_matches[:1], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)    
 
     f = plt.figure()
     f.add_subplot(1,1, 1)
-    plt.imshow(np.array(matched_image))
+    plt.imshow(np.array(img_matches))
     plt.show(block=True)
 
-    print(f"closest point is {matched_points1[0]} and matching point is {matched_points2[0]}")
-    pointX1, pointY1 = matched_points1[0]
-    pointX2, pointY2 = matched_points2[0]
-    print((pointX1 + x_start)-(pointX2))
+    # print(f"closest point is {matched_points1[0]} and matching point is {matched_points2[0]}")
+    # pointX1, pointY1 = matched_points1[0]
+    # pointX2, pointY2 = matched_points2[0]
+    # print((pointX1 + x_start)-(pointX2))
 
-    pixelDistance = ((pointX1 + x_start)-(pointX2))
-    objectDistance = round((0.00869691*(pixelDistance**2))+(-5.67746*(pixelDistance))+938.723) # todo: update equation for object distance upto 2 m at 10cm intervals
-    print(objectDistance)
+    # pixelDistance = ((pointX1 + x_start)-(pointX2))
+    # objectDistance = round((0.00869691*(pixelDistance**2))+(-5.67746*(pixelDistance))+938.723) # todo: update equation for object distance upto 2 m at 10cm intervals
+    # print(objectDistance)
 
-    h, w, c = frame1.shape
+    # h, w, c = frame1.shape
 
-    vertical = "middle"
-    horizontal = "middle"
+    # vertical = "middle"
+    # horizontal = "middle"
 
-    match (pointX2 // (w/3)):
-        case 0.0:
-            horizontal = "left"
-        case 1.0:
-            horizontal = "middle"
-        case 2.0:
-            horizontal = "right"
+    # match (pointX2 // (w/3)):
+    #     case 0.0:
+    #         horizontal = "left"
+    #     case 1.0:
+    #         horizontal = "middle"
+    #     case 2.0:
+    #         horizontal = "right"
 
-    match ((pointY2 + y_start) // (h/3)):
-        case 0.0:
-            horizontal = "top"
-        case 1.0:
-            horizontal = "middle"
-        case 2.0:
-            horizontal = "bottom"
+    # match ((pointY2 + y_start) // (h/3)):
+    #     case 0.0:
+    #         horizontal = "top"
+    #     case 1.0:
+    #         horizontal = "middle"
+    #     case 2.0:
+    #         horizontal = "bottom"
 
-    text = f'closest object at {objectDistance} centimeters, direction {vertical},{horizontal}' 
-    print(text)
+    # text = f'closest object at {objectDistance} centimeters, direction {vertical},{horizontal}' 
+    # print(text)
 
-    # text to speech setup
-    tts = gTTS(text=text, lang='en')
-    tts.save("audio.mp3")
-    playsound("audio.mp3")
-    os.remove("audio.mp3") 
+    # # text to speech setup
+    # tts = gTTS(text=text, lang='en')
+    # tts.save("audio.mp3")
+    # playsound("audio.mp3")
+    # os.remove("audio.mp3") 
     
 
     if cv2.waitKey(1) & 0xFF == ord('q'): 
