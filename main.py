@@ -3,27 +3,40 @@ import numpy as np
 from PIL import Image
 import cv2
 import matplotlib.pyplot as plt
-import time
-from gtts import gTTS
-from playsound import playsound
-import os
-import math
+# import time
+# from gtts import gTTS
+# from playsound import playsound
+# import os
+# import math
 
 cap1 = cv2.VideoCapture(1) # left
-cap2 = cv2.VideoCapture(2) # right
+cap2 = cv2.VideoCapture(0) # right
 
-cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+# cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+# cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+# cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+# cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+if not cap1.get(cv2.CAP_PROP_AUTOFOCUS):
+    print("Manual focus supported. Autofocus is turned off.")
+    cap1.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+    cap2.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+cap1.set(cv2.CAP_PROP_FOCUS, 0)
+cap2.set(cv2.CAP_PROP_FOCUS, 0)
+# 120 is blur, 30 is clear
 
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
 orb = cv2.SIFT_create()
 
 while True:
-    ret, frame1 = cap1.read()
-    ret, frame2 = cap2.read()
+    
+    try: 
+        ret, frame1 = cap1.read()
+        ret, frame2 = cap2.read()
+        print("started")
+    except: 
+        cap1 = cv2.VideoCapture(1) # left
+        cap2 = cv2.VideoCapture(0) # right
 
     frame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
     frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
@@ -55,73 +68,77 @@ while True:
     if ymin < 0:
         ymin = 0
     
-    keypoints1, descriptors1 = orb.detectAndCompute(gridTemplate, None)
-    keypoints2, descriptors2 = orb.detectAndCompute(frame2[ymin:ymax, :], None)
-    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-    matches = bf.match(descriptors1, descriptors2)
-    matches = sorted(matches, key=lambda x: x.distance)
+    try:
+        keypoints1, descriptors1 = orb.detectAndCompute(gridTemplate, None)
+        keypoints2, descriptors2 = orb.detectAndCompute(frame2[ymin:ymax, :], None)
+        bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+        matches = bf.match(descriptors1, descriptors2)
+        matches = sorted(matches, key=lambda x: x.distance)
 
-    matched_points1 = []
-    matched_points2 = []
-    points_distance = []
+        matched_points1 = []
+        matched_points2 = []
+        points_distance = []
 
-    for match in matches[:5]:  # Limit to the top 20 matches
-        img1_idx = match.queryIdx
-        img2_idx = match.trainIdx
+        for match in matches[:5]:  # Limit to the top 20 matches
+            img1_idx = match.queryIdx
+            img2_idx = match.trainIdx
 
-        # Get the coordinates of the keypoints in both images
-        (x1, y1) = keypoints1[img1_idx].pt
-        (x2, y2) = keypoints2[img2_idx].pt
+            # Get the coordinates of the keypoints in both images
+            (x1, y1) = keypoints1[img1_idx].pt
+            (x2, y2) = keypoints2[img2_idx].pt
 
-        matched_points1.append((x1, y1))
-        matched_points2.append((x2, y2))
+            matched_points1.append((x1, y1))
+            matched_points2.append((x2, y2))
 
-    matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:1], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:1], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
-    f = plt.figure()
-    f.add_subplot(1,1, 1)
-    plt.imshow(np.array(matched_image))
-    plt.show(block=True)
+        f = plt.figure()
+        f.add_subplot(1,1, 1)
+        plt.imshow(np.array(matched_image))
+        plt.show(block=True)
 
-    print(f"closest point is {matched_points1[0]} and matching point is {matched_points2[0]}")
-    pointX1, pointY1 = matched_points1[0]
-    pointX2, pointY2 = matched_points2[0]
-    print((pointX1 + x_start)-(pointX2))
+        print(f"closest point is {matched_points1[0]} and matching point is {matched_points2[0]}")
+        pointX1, pointY1 = matched_points1[0]
+        pointX2, pointY2 = matched_points2[0]
+        print("pixel distance: ", (pointX1 + x_start)-(pointX2))
 
-    pixelDistance = ((pointX1 + x_start)-(pointX2))
-    objectDistance = round((0.00869691*(pixelDistance**2))+(-5.67746*(pixelDistance))+938.723) # todo: update equation for object distance upto 2 m at 10cm intervals
-    print(objectDistance)
+        pixelDistance = ((pointX1 + x_start)-(pointX2))
+        objectDistance = round((178.234)*(0.982881**(pixelDistance))+100.1429) # todo: update equation for object distance upto 2 m at 10cm intervals
+        print(objectDistance)
 
-    h, w, c = frame1.shape
+        h, w, c = frame1.shape
 
-    vertical = "middle"
-    horizontal = "middle"
+        vertical = "middle"
+        horizontal = "middle"
 
-    match (pointX2 // (w/3)):
-        case 0.0:
-            horizontal = "left"
-        case 1.0:
-            horizontal = "middle"
-        case 2.0:
-            horizontal = "right"
+        match (pointX2 // (w/3)):
+            case 0.0:
+                horizontal = "left"
+            case 1.0:
+                horizontal = "middle"
+            case 2.0:
+                horizontal = "right"
 
-    match ((pointY2 + y_start) // (h/3)):
-        case 0.0:
-            horizontal = "top"
-        case 1.0:
-            horizontal = "middle"
-        case 2.0:
-            horizontal = "bottom"
+        match ((pointY2 + y_start) // (h/3)):
+            case 0.0:
+                horizontal = "top"
+            case 1.0:
+                horizontal = "middle"
+            case 2.0:
+                horizontal = "bottom"
 
-    text = f'closest object at {objectDistance} centimeters, direction {vertical},{horizontal}' 
-    print(text)
+        text = f'closest object at {objectDistance} centimeters, direction {vertical},{horizontal}' 
+        print(text)
 
-    # text to speech setup
-    tts = gTTS(text=text, lang='en')
-    tts.save("audio.mp3")
-    playsound("audio.mp3")
-    os.remove("audio.mp3") 
-    
+        # text to speech setup
+        # tts = gTTS(text=text, lang='en')
+        # tts.save("audio.mp3")
+        # playsound("audio.mp3")
+        # os.remove("audio.mp3") 
+
+    except:
+        cap1 = cv2.VideoCapture(1) # left
+        cap2 = cv2.VideoCapture(0) # right
 
     if cv2.waitKey(1) & 0xFF == ord('q'): 
         break
