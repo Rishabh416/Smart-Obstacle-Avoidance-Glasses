@@ -18,24 +18,46 @@ dtype = np.uint8  # Image data is 8-bit unsigned integers
 shm1 = shared_memory.SharedMemory(name='camera1_shared_mem')
 shm2 = shared_memory.SharedMemory(name='camera2_shared_mem')
 
-# Create NumPy arrays backed by the shared memory for each camera
-frame1 = np.ndarray(frame_shape, dtype=dtype, buffer=shm1.buf)
-frame2 = np.ndarray(frame_shape, dtype=dtype, buffer=shm2.buf)
-
-# Now frame1 and frame2 represent the images from Camera 1 and Camera 2
-# Example usage
-image1 = np.copy(frame1)  # Image from Camera 1
-image2 = np.copy(frame2)  # Image from Camera 2
-
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
 orb = cv2.SIFT_create()
 
+
+rainbow_overlay = np.zeros((480, 640, 3), dtype=np.uint8)
+
+# Define the colors for the rainbow (Red to Purple in BGR format)
+rainbow_colors = [
+    (0, 0, 255),    # Red
+    (0, 255, 0),    # Green
+    (255, 0, 0),    # Blue
+    (0, 255, 255),  # Yellow
+    (255, 255, 0),  # Cyan
+    (255, 0, 255)   # Magenta
+]
+
+# Calculate the width of each color band
+band_width = 640 // (len(rainbow_colors) - 1)
+
+for i in range(len(rainbow_colors) - 1):
+    for x in range(i * band_width, (i + 1) * band_width):
+        # Interpolate between two colors
+        alpha = (x - i * band_width) / band_width
+        color = (1 - alpha) * np.array(rainbow_colors[i]) + alpha * np.array(rainbow_colors[i + 1])
+        rainbow_overlay[:, x, :] = color
+
 while True:
+
+    # Create NumPy arrays backed by the shared memory for each camera
+    frame1 = np.ndarray(frame_shape, dtype=dtype, buffer=shm1.buf)
+    frame2 = np.ndarray(frame_shape, dtype=dtype, buffer=shm2.buf)
+
+    # Now frame1 and frame2 represent the images from Camera 1 and Camera 2
+    # Example usage
+    image1 = np.copy(frame1)  # Image from Camera 1
+    image2 = np.copy(frame2)  # Image from Camera 2
 
     frame1 = cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)
     frame2 = cv2.cvtColor(image2, cv2.COLOR_BGR2RGB)
-
 
     image = Image.fromarray(cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB))
     result = pipe(image)
@@ -45,6 +67,10 @@ while True:
     min1, max1, micloc1, maxloc1 = cv2.minMaxLoc(depthimagearray)
     print("image1",max1, maxloc1)
     x, y = maxloc1
+    
+    opacity = 0.6
+    frame1 = cv2.addWeighted(rainbow_overlay, opacity, frame1, 1 - opacity, 0)
+    frame2 = cv2.addWeighted(rainbow_overlay, opacity, frame2, 1 - opacity, 0)
 
     halflength = 100
     x_start = max(0, x - halflength)
@@ -56,8 +82,8 @@ while True:
     ymax = y + (2*halflength)
     ymin = y - (2*halflength)
 
-    if ymax > 1920:
-        ymax = 1920
+    if ymax > 640:
+        ymax = 640
     if ymin < 0:
         ymin = 0
     
@@ -121,7 +147,7 @@ while True:
                 horizontal = "bottom"
 
         text = f'closest object at {objectDistance} centimeters, direction {vertical},{horizontal}' 
-        print(text)
+        # print(text)
 
         # text to speech setup
         # tts = gTTS(text=text, lang='en')
