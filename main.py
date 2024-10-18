@@ -8,41 +8,34 @@ import matplotlib.pyplot as plt
 # from playsound import playsound
 # import os
 # import math
+from multiprocessing import shared_memory
 
-cap1 = cv2.VideoCapture(1) # left
-cap2 = cv2.VideoCapture(0) # right
+# Define the shared memory block details
+frame_shape = (480, 640, 3)  # Assuming 640x480 resolution with 3 channels (RGB)
+dtype = np.uint8  # Image data is 8-bit unsigned integers
 
-# cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-# cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-# cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-# cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-if not cap1.get(cv2.CAP_PROP_AUTOFOCUS):
-    print("Manual focus supported. Autofocus is turned off.")
-    cap1.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-    cap2.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-cap1.set(cv2.CAP_PROP_FOCUS, 0)
-cap2.set(cv2.CAP_PROP_FOCUS, 0)
-# 120 is blur, 30 is clear
+# Connect to the shared memory for Camera 1 and Camera 2
+shm1 = shared_memory.SharedMemory(name='camera1_shared_mem')
+shm2 = shared_memory.SharedMemory(name='camera2_shared_mem')
+
+# Create NumPy arrays backed by the shared memory for each camera
+frame1 = np.ndarray(frame_shape, dtype=dtype, buffer=shm1.buf)
+frame2 = np.ndarray(frame_shape, dtype=dtype, buffer=shm2.buf)
+
+# Now frame1 and frame2 represent the images from Camera 1 and Camera 2
+# Example usage
+image1 = np.copy(frame1)  # Image from Camera 1
+image2 = np.copy(frame2)  # Image from Camera 2
 
 pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
 
 orb = cv2.SIFT_create()
 
 while True:
-    
-    try: 
-        ret, frame1 = cap1.read()
-        ret, frame2 = cap2.read()
-        print("started")
-    except: 
-        cap1 = cv2.VideoCapture(1) # left
-        cap2 = cv2.VideoCapture(0) # right
 
-    frame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
-    frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
+    frame1 = cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)
+    frame2 = cv2.cvtColor(image2, cv2.COLOR_BGR2RGB)
 
-    frame1 = cv2.GaussianBlur(frame1,(5,5),0)
-    frame2 = cv2.GaussianBlur(frame2,(5,5),0)
 
     image = Image.fromarray(cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB))
     result = pipe(image)
@@ -137,8 +130,7 @@ while True:
         # os.remove("audio.mp3") 
 
     except:
-        cap1 = cv2.VideoCapture(1) # left
-        cap2 = cv2.VideoCapture(0) # right
+        print("error")
 
     if cv2.waitKey(1) & 0xFF == ord('q'): 
         break
