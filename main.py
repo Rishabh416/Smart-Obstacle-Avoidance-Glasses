@@ -48,8 +48,8 @@ for i in range(len(rainbow_colors) - 1):
 while True:
 
     # Create NumPy arrays backed by the shared memory for each camera
-    frame1 = np.ndarray(frame_shape, dtype=dtype, buffer=shm1.buf)
-    frame2 = np.ndarray(frame_shape, dtype=dtype, buffer=shm2.buf)
+    frame2 = np.ndarray(frame_shape, dtype=dtype, buffer=shm1.buf)
+    frame1 = np.ndarray(frame_shape, dtype=dtype, buffer=shm2.buf)
 
     # Now frame1 and frame2 represent the images from Camera 1 and Camera 2
     # Example usage
