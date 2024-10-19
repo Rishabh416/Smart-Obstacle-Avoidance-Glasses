@@ -16,6 +16,10 @@ shm = shared_memory.SharedMemory(create=True, size=int(np.prod(frame_shape)) * n
 # Create a NumPy array backed by shared memory
 shared_array = np.ndarray(frame_shape, dtype=dtype, buffer=shm.buf)
 
+# Initialize brightness and contrast factors
+brightness_factor = 1.0
+contrast_factor = 1.0
+
 # Function to update webcam feed in the Tkinter window
 def update_frame():
     ret, frame = cap.read()  # Capture frame from the webcam
@@ -25,11 +29,14 @@ def update_frame():
     # Resize frame to match the shared memory shape if necessary (e.g., 640x480)
     frame_resized = cv2.resize(frame, (frame_shape[1], frame_shape[0]))
 
-    # Write the frame to shared memory
-    shared_array[:] = frame_resized[:]
+    # Apply contrast and brightness adjustments
+    adjusted_frame = cv2.convertScaleAbs(frame_resized, alpha=contrast_factor, beta=(brightness_factor - 1) * 255)
+
+    # Write the adjusted frame to shared memory
+    shared_array[:] = adjusted_frame[:]
 
     # Convert the frame to a Tkinter-compatible image
-    img = Image.fromarray(frame_resized)
+    img = Image.fromarray(adjusted_frame)
     imgtk = ImageTk.PhotoImage(image=img)
 
     # Update the label with the new frame
@@ -43,6 +50,16 @@ def update_frame():
 def adjust_focus(value):
     cap.set(cv2.CAP_PROP_FOCUS, int(value))
 
+# Function to adjust the synthetic brightness based on the slider value
+def adjust_brightness(value):
+    global brightness_factor
+    brightness_factor = float(value) / 100  # Convert slider value to a factor between 0 and 2
+
+# Function to adjust the synthetic contrast based on the slider value
+def adjust_contrast(value):
+    global contrast_factor
+    contrast_factor = float(value) / 100  # Convert slider value to a factor between 0 and 2
+
 # Function to release the camera, close the shared memory, and close the window when quitting
 def quit_program():
     cap.release()  # Release the webcam
@@ -52,7 +69,7 @@ def quit_program():
 
 # Set up the Tkinter window
 root = tk.Tk()
-root.title("Webcam with Focus Control")
+root.title("Webcam with Focus, Brightness, and Contrast Control")
 
 # Set up the webcam capture using OpenCV
 cap = cv2.VideoCapture(0)
@@ -73,6 +90,22 @@ focus_slider.pack()
 
 # Bind the slider to the focus adjustment function
 focus_slider.config(command=adjust_focus)
+
+# Create a slider to adjust the synthetic brightness
+brightness_slider = Scale(root, from_=0, to=200, orient=HORIZONTAL, label="Brightness")
+brightness_slider.set(100)  # Set the default brightness level (100%)
+brightness_slider.pack()
+
+# Bind the slider to the brightness adjustment function
+brightness_slider.config(command=adjust_brightness)
+
+# Create a slider to adjust the synthetic contrast
+contrast_slider = Scale(root, from_=0, to=200, orient=HORIZONTAL, label="Contrast")
+contrast_slider.set(100)  # Set the default contrast level (100%)
+contrast_slider.pack()
+
+# Bind the slider to the contrast adjustment function
+contrast_slider.config(command=adjust_contrast)
 
 # Start the video capture loop
 update_frame()
