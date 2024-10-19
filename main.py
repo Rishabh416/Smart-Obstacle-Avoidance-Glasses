@@ -98,7 +98,19 @@ while True:
         matched_points2 = []
         points_distance = []
 
-        
+        for match in matches[:5]:  # Limit to the top 20 matches
+            img1_idx = match.queryIdx
+            img2_idx = match.trainIdx
+
+            # Get the coordinates of the keypoints in both images
+            (x1, y1) = keypoints1[img1_idx].pt
+            (x2, y2) = keypoints2[img2_idx].pt
+
+            matched_points1.append((x1, y1))
+            matched_points2.append((x2, y2))
+
+        matched_image = cv2.drawMatches(gridTemplate, keypoints1, frame2[ymin:ymax, :], keypoints2, matches[:1], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
         f = plt.figure()
         f.add_subplot(1,1, 1)
         plt.imshow(np.array(matched_image))
